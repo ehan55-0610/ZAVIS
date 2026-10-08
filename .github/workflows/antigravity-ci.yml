@@ -21,16 +21,11 @@ jobs:
           mkdir -p "$HOME/.gemini/antigravity-cli"
           echo '{ "modelProvider": "gemini" }' > "$HOME/.gemini/antigravity-cli/settings.json"
 
-      - name: 사용 가능한 모델 확인 (디버그용)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: agy models || true
-
       - name: Antigravity 에이전트 코드 점검
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          agy -p "이 프로젝트의 최근 수정된 코드를 분석해 줘. 특히 OpenAI API 연동 부분과 Supabase 데이터베이스 접근 시 보안 취약점이나 메모리 누수 문제가 없는지 꼼꼼히 점검해. 문제가 발견되면 비정상 종료(Exit 1)하고, 통과하면 요약 리포트를 작성해." --model gemini-3.5-flash --output-format text > review.md
+          agy -p "이 프로젝트의 최근 수정된 코드를 분석해 줘. 특히 OpenAI API 연동 부분과 Supabase 데이터베이스 접근 시 보안 취약점이나 메모리 누수 문제가 없는지 꼼꼼히 점검해. 문제가 발견되면 비정상 종료(Exit 1)하고, 통과하면 요약 리포트를 작성해." --model gemini-3.8-flash --effort low --output-format text > review.md
           cat review.md
 
       - name: 리뷰 리포트 업로드
