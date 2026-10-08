@@ -1,11 +1,16 @@
 ﻿name: Antigravity CI/CD Pipeline
 
+# Kiro 등으로 작성/수정한 코드가 올라오면 Google Antigravity 에이전트가
+# 자동으로 보안 취약점과 에러를 검사한다.
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  agent_review_and_deploy:
+  agent_security_review:
     runs-on: ubuntu-latest
     steps:
       - name: 코드 가져오기
@@ -21,18 +26,22 @@ jobs:
           mkdir -p "$HOME/.gemini/antigravity-cli"
           echo '{ "modelProvider": "gemini" }' > "$HOME/.gemini/antigravity-cli/settings.json"
 
-      - name: Antigravity 에이전트 코드 점검
+      - name: Antigravity 보안 취약점 및 에러 검사
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          agy -p "이 프로젝트의 최근 수정된 코드를 분석해 줘. 특히 OpenAI API 연동 부분과 Supabase 데이터베이스 접근 시 보안 취약점이나 메모리 누수 문제가 없는지 꼼꼼히 점검해. 문제가 발견되면 비정상 종료(Exit 1)하고, 통과하면 요약 리포트를 작성해." --model gemini-3.8-flash --effort low --output-format text > review.md
+          agy -p "이 프로젝트의 소스 코드를 검토해 줘. 보안 취약점(하드코딩된 비밀키, 인젝션, 안전하지 않은 입력 처리, 잘못된 인증/인가 등), 명백한 버그와 런타임 에러, 리소스/메모리 누수를 중점적으로 점검해. 심각한 문제가 하나라도 발견되면 비정상 종료(Exit 1)하고, 문제가 없으면 요약 리포트를 작성해." --model gemini-3.8-flash --effort low --output-format text > review.md
+          echo "===== Antigravity 검사 리포트 ====="
           cat review.md
 
       - name: 리뷰 리포트 업로드
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: antigravity-review
           path: review.md
 
-      - name: 실서버 배포 (리뷰 통과 시)
-        run: echo "안티그래비티의 에이전트 리뷰를 무사히 통과했습니다! Vercel로 배포를 시작합니다."
+      - name: 실서버 배포 (검사 통과 시)
+        if: success()
+        run: echo "Antigravity 보안 검사를 통과했습니다! 배포를 시작합니다."
+        # 실제 배포 명령어 (예: npx vercel --prod)가 들어갈 자리입니다.
