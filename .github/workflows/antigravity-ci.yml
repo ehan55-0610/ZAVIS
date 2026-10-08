@@ -30,7 +30,13 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          agy -p "이 프로젝트의 소스 코드를 검토해 줘. 보안 취약점(하드코딩된 비밀키, 인젝션, 안전하지 않은 입력 처리, 잘못된 인증/인가 등), 명백한 버그와 런타임 에러, 리소스/메모리 누수를 중점적으로 점검해. 심각한 문제가 하나라도 발견되면 비정상 종료(Exit 1)하고, 문제가 없으면 요약 리포트를 작성해." --model gemini-3.8-flash --effort low --output-format text > review.md
+          # plan 모드: 에이전트가 파일을 수정하지 않고 분석/리포트만 하도록 고정 (CI 비대화 환경에 적합)
+          agy -p "이 프로젝트의 소스 코드를 읽고 보안/품질 관점에서 분석 리포트만 작성해 줘. 파일을 수정하거나 명령을 실행하지 말고, 다음을 점검해: 하드코딩된 비밀키, 인젝션, 안전하지 않은 입력 처리, 잘못된 인증/인가, 명백한 버그와 런타임 에러, 리소스/메모리 누수. 발견한 문제와 심각도, 권장 조치를 요약해 줘." \
+            --model gemini-3.8-flash \
+            --effort low \
+            --mode plan \
+            --print-timeout 5m \
+            --output-format text > review.md
           echo "===== Antigravity 검사 리포트 ====="
           cat review.md
 
