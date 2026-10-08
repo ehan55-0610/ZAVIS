@@ -1,20 +1,4 @@
-# Antigravity CI 파이프라인
-# 이 파일의 내용은 직접 작성하세요.
-# 아래는 참고용 예시 골격입니다. 필요에 맞게 교체하면 됩니다.
-#
-# name: Antigravity CI
-#
-# on:
-#   push:
-#   pull_request:
-#
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v4
-
-name: Antigravity CI/CD Pipeline
+﻿name: Antigravity CI/CD Pipeline
 
 on:
   push:
@@ -28,15 +12,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Antigravity CLI 설치하기
-        run: curl -fsSL https://antigravity.google/cli/install.sh | bash
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Antigravity API 키 모드 설정
+        run: |
+          mkdir -p "$HOME/.gemini/antigravity-cli"
+          echo '{ "modelProvider": "gemini" }' > "$HOME/.gemini/antigravity-cli/settings.json"
 
       - name: Antigravity 에이전트 코드 점검
-        # 안티그래비티 에이전트에게 지시를 내리는 핵심 구간입니다.
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          agy run "이 프로젝트의 최근 수정된 코드를 분석해 줘. 특히 OpenAI API 연동 부분과 Supabase 데이터베이스 접근 시 보안 취약점이나 메모리 누수 문제가 없는지 꼼꼼히 점검해. 문제가 발견되면 테스트를 실패(Exit 1) 처리하고, 통과하면 요약 리포트를 작성해." --output review.md
-          
-      - name: 실서버 배포 (테스트 통과 시)
+          agy -p "이 프로젝트의 최근 수정된 코드를 분석해 줘. 특히 OpenAI API 연동 부분과 Supabase 데이터베이스 접근 시 보안 취약점이나 메모리 누수 문제가 없는지 꼼꼼히 점검해. 문제가 발견되면 비정상 종료(Exit 1)하고, 통과하면 요약 리포트를 작성해." --output-format text > review.md
+          cat review.md
+
+      - name: 리뷰 리포트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: antigravity-review
+          path: review.md
+
+      - name: 실서버 배포 (리뷰 통과 시)
         run: echo "안티그래비티의 에이전트 리뷰를 무사히 통과했습니다! Vercel로 배포를 시작합니다."
-        # 실제 배포 명령어 (예: npx vercel --prod)가 들어갈 자리입니다.
